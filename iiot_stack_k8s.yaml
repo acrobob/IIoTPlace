@@ -3,6 +3,7 @@ kind: Namespace
 metadata:
   name: iiot
 ---
+# PersistentVolumeClaim for InfluxDB
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -15,6 +16,83 @@ spec:
     requests:
       storage: 1Gi
 ---
+# Node-RED Deployment & Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodered
+  namespace: iiot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodered
+  template:
+    metadata:
+      labels:
+        app: nodered
+    spec:
+      containers:
+        - name: nodered
+          image: nodered/node-red:latest
+          ports:
+            - containerPort: 1880
+          volumeMounts:
+            - name: nodered-data
+              mountPath: /data
+      volumes:
+        - name: nodered-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodered
+  namespace: iiot
+spec:
+  type: LoadBalancer
+  selector:
+    app: nodered
+  ports:
+    - port: 1880
+      targetPort: 1880
+---
+# Mosquitto Deployment & Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  namespace: iiot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:latest
+          ports:
+            - containerPort: 1883
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto
+  namespace: iiot
+spec:
+  type: LoadBalancer
+  selector:
+    app: mosquitto
+  ports:
+    - port: 1883
+      targetPort: 1883
+---
+# InfluxDB 1.8 Deployment & Service
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -45,8 +123,8 @@ spec:
             - name: INFLUXDB_ADMIN_PASSWORD
               value: iotpass
           volumeMounts:
-            - mountPath: /var/lib/influxdb
-              name: influxdb-storage
+            - name: influxdb-storage
+              mountPath: /var/lib/influxdb
       volumes:
         - name: influxdb-storage
           persistentVolumeClaim:
@@ -59,110 +137,9 @@ metadata:
   namespace: iiot
 spec:
   type: LoadBalancer
+  selector:
+    app: influxdb
   ports:
     - port: 8086
       targetPort: 8086
-  selector:
-    app: influxdb
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: mosquitto
-  namespace: iiot
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: mosquitto
-  template:
-    metadata:
-      labels:
-        app: mosquitto
-    spec:
-      containers:
-        - name: mosquitto
-          image: eclipse-mosquitto:2.0
-          ports:
-            - containerPort: 1883
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mosquitto
-  namespace: iiot
-spec:
-  type: LoadBalancer
-  ports:
-    - port: 1883
-      targetPort: 1883
-  selector:
-    app: mosquitto
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nodered
-  namespace: iiot
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: nodered
-  template:
-    metadata:
-      labels:
-        app: nodered
-    spec:
-      containers:
-        - name: nodered
-          image: nodered/node-red:latest
-          ports:
-            - containerPort: 1880
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: nodered
-  namespace: iiot
-spec:
-  type: LoadBalancer
-  ports:
-    - port: 1880
-      targetPort: 1880
-  selector:
-    app: nodered
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: grafana
-  namespace: iiot
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: grafana
-  template:
-    metadata:
-      labels:
-        app: grafana
-    spec:
-      containers:
-        - name: grafana
-          image: grafana/grafana:latest
-          ports:
-            - containerPort: 3000
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: grafana
-  namespace: iiot
-spec:
-  type: LoadBalancer
-  ports:
-    - port: 3000
-      targetPort: 3000
-  selector:
-    app: grafana
+
