@@ -58,7 +58,7 @@ metadata:
   name: influxdb
   namespace: iiot
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
     - port: 8086
       targetPort: 8086
